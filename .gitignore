@@ -4,4 +4,5 @@
 *.pyc
 .vscode/
 .idea/
+CMakeUserPresets.json
 #<fips
