@@ -1,6 +1,4 @@
 #define SOKOL_IMPL
-#if defined(_WIN32)
-#endif
 #include "sokol_app.h"
 #include "sokol_gfx.h"
 #include "sokol_debugtext.h"
