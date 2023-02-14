@@ -1,6 +1,5 @@
 #define SOKOL_IMPL
 #if defined(_WIN32)
-#define SOKOL_LOG(s) OutputDebugStringA(s)
 #endif
 #include "sokol_app.h"
 #include "sokol_gfx.h"
