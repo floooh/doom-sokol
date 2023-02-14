@@ -9,6 +9,7 @@
 #include "sokol_debugtext.h"
 #include "sokol_fetch.h"
 #include "sokol_audio.h"
+#include "sokol_log.h"
 #include "sokol_glue.h"
 #include "m_argv.h"
 #include "d_event.h"
@@ -162,22 +163,26 @@ void init(void) {
         .shader_pool_size = 8,
         .pipeline_pool_size = 8,
         .context_pool_size = 1,
-        .context = sapp_sgcontext()
+        .context = sapp_sgcontext(),
+        .logger.func = slog_func,
     });
     sdtx_setup(&(sdtx_desc_t){
         .context_pool_size = 1,
         .fonts[0] = sdtx_font_kc854(),
+        .logger.func = slog_func,
     });
     sfetch_setup(&(sfetch_desc_t){
         .max_requests = 2,
         .num_channels = 1,
         .num_lanes = 2,
+        .logger.func = slog_func,
     });
     saudio_setup(&(saudio_desc){
         .buffer_frames = MAXSAMPLECOUNT,
         .packet_frames = 128,
         .num_packets = MAXSAMPLECOUNT / 128,
         .num_channels = 2,
+        .logger.func = slog_func,
     });
 
     // a vertex buffer to render a fullscreen triangle
@@ -691,6 +696,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .height = SCREENHEIGHT * 3,
         .window_title = "Doom (shareware) on Sokol",
         .icon.sokol_default = true,
+        .logger.func = slog_func,
     };
 }
 
