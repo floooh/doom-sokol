@@ -342,7 +342,7 @@ static void draw_greeting_screen(void) {
     }
 
     sg_pass_action pass_action = {
-        .colors[0] = { .action = SG_ACTION_CLEAR, .value = { 0.0f, 0.0f, 0.0f, 1.0f } }
+        .colors[0] = { .load_action = SG_LOADACTION_CLEAR, .clear_value = { 0.0f, 0.0f, 0.0f, 1.0f } }
     };
     sg_begin_default_pass(&pass_action, sapp_width(), sapp_height());
     sdtx_draw();
@@ -389,7 +389,7 @@ static void draw_game_frame(void) {
     });
 
     // offscreen render pass to perform color palette lookup
-    const sg_pass_action offscreen_pass_action = { .colors[0] = { .action = SG_ACTION_DONTCARE } };
+    const sg_pass_action offscreen_pass_action = { .colors[0] = { .load_action = SG_LOADACTION_DONTCARE } };
     sg_begin_pass(app.gfx.offscreen_pass, &offscreen_pass_action);
     sg_apply_pipeline(app.gfx.offscreen_pip);
     sg_apply_bindings(&(sg_bindings){
@@ -405,8 +405,8 @@ static void draw_game_frame(void) {
     // render resulting texture to display framebuffer with upscaling
     const sg_pass_action display_pass_action = {
         .colors[0] = {
-            .action = SG_ACTION_CLEAR,
-            .value = { 0.0f, 0.0f, 0.0f, 1.0f }
+            .load_action = SG_LOADACTION_CLEAR,
+            .clear_value = { 0.0f, 0.0f, 0.0f, 1.0f }
         }
     };
     sg_begin_default_pass(&display_pass_action, sapp_width(), sapp_height());
