@@ -81,6 +81,8 @@ static struct {
         sg_image pal_img;       // 256x1 palette lookup texture
         sg_image pix_img;       // 320x200 R8 framebuffer texture
         sg_image rgba_img;      // 320x200 RGBA8 framebuffer texture
+        sg_sampler smp_palettize;   // sampler for the palettization pass
+        sg_sampler smp_upscale;     // sampler for the upscale pass
         sg_pipeline offscreen_pip;
         sg_pipeline display_pip;
         sg_pass offscreen_pass;
@@ -201,10 +203,6 @@ void init(void) {
         .height = SCREENHEIGHT,
         .pixel_format = SG_PIXELFORMAT_R8,
         .usage = SG_USAGE_STREAM,
-        .min_filter = SG_FILTER_NEAREST,
-        .mag_filter = SG_FILTER_NEAREST,
-        .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
-        .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
     });
 
     // another dynamic texture for the color palette
@@ -213,10 +211,6 @@ void init(void) {
         .height = 1,
         .pixel_format = SG_PIXELFORMAT_RGBA8,
         .usage = SG_USAGE_STREAM,
-        .min_filter = SG_FILTER_NEAREST,
-        .mag_filter = SG_FILTER_NEAREST,
-        .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
-        .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
     });
 
     // an RGBA8 texture to hold the 'color palette expanded' image
@@ -227,6 +221,18 @@ void init(void) {
         .height = SCREENHEIGHT,
         .pixel_format = SG_PIXELFORMAT_RGBA8,
         .usage = SG_USAGE_IMMUTABLE,
+    });
+
+    // a sampler with nearest filtering for the palettization pass
+    app.gfx.smp_palettize = sg_make_sampler(&(sg_sampler_desc){
+        .min_filter = SG_FILTER_NEAREST,
+        .mag_filter = SG_FILTER_NEAREST,
+        .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
+        .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
+    });
+
+    // a sampler with linear filtering for the upscaling pass
+    app.gfx.smp_upscale = sg_make_sampler(&(sg_sampler_desc){
         .min_filter = SG_FILTER_LINEAR,
         .mag_filter = SG_FILTER_LINEAR,
         .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
@@ -394,9 +400,12 @@ static void draw_game_frame(void) {
     sg_apply_pipeline(app.gfx.offscreen_pip);
     sg_apply_bindings(&(sg_bindings){
         .vertex_buffers[0] = app.gfx.vbuf,
-        .fs_images = {
-            [SLOT_pix_img] = app.gfx.pix_img,
-            [SLOT_pal_img] = app.gfx.pal_img,
+        .fs = {
+            .images = {
+                [SLOT_pix_img] = app.gfx.pix_img,
+                [SLOT_pal_img] = app.gfx.pal_img,
+            },
+            .samplers[SLOT_smp] = app.gfx.smp_palettize,
         }
     });
     sg_draw(0, 3, 1);
@@ -413,7 +422,10 @@ static void draw_game_frame(void) {
     sg_apply_pipeline(app.gfx.display_pip);
     sg_apply_bindings(&(sg_bindings){
         .vertex_buffers[0] = app.gfx.vbuf,
-        .fs_images[SLOT_rgba_img] = app.gfx.rgba_img
+        .fs = {
+            .images[SLOT_rgba_img] = app.gfx.rgba_img,
+            .samplers[SLOT_smp] = app.gfx.smp_upscale,
+        },
     });
     apply_viewport(sapp_widthf(), sapp_heightf());
     sg_draw(0, 3, 1);
