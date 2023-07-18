@@ -9,10 +9,10 @@ def build_deploy_webpage(fips_dir, proj_dir):
     webpage_dir = '{}/fips-deploy/doom-sokol-webpage'.format(ws_dir)
     if not os.path.isdir(webpage_dir) :
         os.makedirs(webpage_dir)
-    
+
     project.gen(fips_dir, proj_dir, BuildConfig)
     project.build(fips_dir, proj_dir, BuildConfig)
-    
+
     src_dir = '{}/fips-deploy/doom-sokol/{}'.format(ws_dir, BuildConfig)
     dst_dir = webpage_dir
 
@@ -32,21 +32,21 @@ def serve_webpage(fips_dir, proj_dir) :
     if p == 'osx' :
         try :
             subprocess.call(
-                'open http://localhost:8000 ; python3 {}/mod/httpserver.py'.format(fips_dir),
+                'http-server -c-1 -g -o'.format(fips_dir),
                 cwd = webpage_dir, shell=True)
         except KeyboardInterrupt :
             pass
     elif p == 'win':
         try:
             subprocess.call(
-                'cmd /c start http://localhost:8000 && python3 {}/mod/httpserver.py'.format(fips_dir),
+                'http-server -c-1 -g -o'.format(fips_dir),
                 cwd = webpage_dir, shell=True)
         except KeyboardInterrupt:
             pass
     elif p == 'linux':
         try:
             subprocess.call(
-                'xdg-open http://localhost:8000; python3 {}/mod/httpserver.py'.format(fips_dir),
+                'http-server -c-1 -g -o'.format(fips_dir),
                 cwd = webpage_dir, shell=True)
         except KeyboardInterrupt:
             pass
