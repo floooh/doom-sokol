@@ -584,6 +584,8 @@ void input(const sapp_event* ev) {
             push_key('5', false);
             push_key('6', false);
             push_key('7', false);
+            push_key('y', false);
+            push_key('n', false);
         }
         else if ((ev->type == SAPP_EVENTTYPE_KEY_DOWN) || (ev->type == SAPP_EVENTTYPE_KEY_UP)) {
             bool pressed = (ev->type == SAPP_EVENTTYPE_KEY_DOWN);
@@ -670,6 +672,13 @@ void input(const sapp_event* ev) {
                     break;
                 case SAPP_KEYCODE_7:
                     push_key('7', pressed);
+                    break;
+                case SAPP_KEYCODE_Y:
+                case SAPP_KEYCODE_Z:
+                    push_key('y', pressed);
+                    break;
+                case SAPP_KEYCODE_N:
+                    push_key('n', pressed);
                     break;
                 default:
                     consume_event = false;
