@@ -85,7 +85,7 @@ static struct {
         sg_sampler smp_upscale;     // sampler for the upscale pass
         sg_pipeline offscreen_pip;
         sg_pipeline display_pip;
-        sg_pass offscreen_pass;
+        sg_attachments offscreen_attachments;
     } gfx;
     struct {
         key_state_t key_queue[KEY_QUEUE_SIZE];
@@ -164,8 +164,7 @@ void init(void) {
         .image_pool_size = 8,
         .shader_pool_size = 8,
         .pipeline_pool_size = 8,
-        .context_pool_size = 1,
-        .context = sapp_sgcontext(),
+        .environment = sglue_environment(),
         .logger.func = slog_func,
     });
     sdtx_setup(&(sdtx_desc_t){
@@ -269,9 +268,9 @@ void init(void) {
         },
     });
 
-    // a render pass object for the offscreen pass
-    app.gfx.offscreen_pass = sg_make_pass(&(sg_pass_desc){
-        .color_attachments[0].image = app.gfx.rgba_img,
+    // a render pass attachments object for the offscreen pass
+    app.gfx.offscreen_attachments = sg_make_attachments(&(sg_attachments_desc){
+        .colors[0].image = app.gfx.rgba_img,
     });
 
     // start loading the DOOM1.WAD and soundfont files, the game start will be delayed
@@ -347,10 +346,15 @@ static void draw_greeting_screen(void) {
         }
     }
 
-    sg_pass_action pass_action = {
-        .colors[0] = { .load_action = SG_LOADACTION_CLEAR, .clear_value = { 0.0f, 0.0f, 0.0f, 1.0f } }
-    };
-    sg_begin_default_pass(&pass_action, sapp_width(), sapp_height());
+    sg_begin_pass(&(sg_pass){
+        .action = {
+            .colors[0] = {
+                .load_action = SG_LOADACTION_CLEAR,
+                .clear_value = { 0.0f, 0.0f, 0.0f, 1.0f }
+            }
+        },
+        .swapchain = sglue_swapchain(),
+    });
     sdtx_draw();
     sg_end_pass();
     sg_commit();
@@ -395,8 +399,10 @@ static void draw_game_frame(void) {
     });
 
     // offscreen render pass to perform color palette lookup
-    const sg_pass_action offscreen_pass_action = { .colors[0] = { .load_action = SG_LOADACTION_DONTCARE } };
-    sg_begin_pass(app.gfx.offscreen_pass, &offscreen_pass_action);
+    sg_begin_pass(&(sg_pass){
+        .action = { .colors[0] = { .load_action = SG_LOADACTION_DONTCARE } },
+        .attachments = app.gfx.offscreen_attachments,
+    });
     sg_apply_pipeline(app.gfx.offscreen_pip);
     sg_apply_bindings(&(sg_bindings){
         .vertex_buffers[0] = app.gfx.vbuf,
@@ -412,13 +418,15 @@ static void draw_game_frame(void) {
     sg_end_pass();
 
     // render resulting texture to display framebuffer with upscaling
-    const sg_pass_action display_pass_action = {
-        .colors[0] = {
-            .load_action = SG_LOADACTION_CLEAR,
-            .clear_value = { 0.0f, 0.0f, 0.0f, 1.0f }
-        }
-    };
-    sg_begin_default_pass(&display_pass_action, sapp_width(), sapp_height());
+    sg_begin_pass(&(sg_pass){
+        .action = {
+            .colors[0] = {
+                .load_action = SG_LOADACTION_CLEAR,
+                .clear_value = { 0.0f, 0.0f, 0.0f, 1.0f }
+            }
+        },
+        .swapchain = sglue_swapchain()
+    });
     sg_apply_pipeline(app.gfx.display_pip);
     sg_apply_bindings(&(sg_bindings){
         .vertex_buffers[0] = app.gfx.vbuf,
@@ -576,6 +584,8 @@ void input(const sapp_event* ev) {
             push_key('5', false);
             push_key('6', false);
             push_key('7', false);
+            push_key('y', false);
+            push_key('n', false);
         }
         else if ((ev->type == SAPP_EVENTTYPE_KEY_DOWN) || (ev->type == SAPP_EVENTTYPE_KEY_UP)) {
             bool pressed = (ev->type == SAPP_EVENTTYPE_KEY_DOWN);
@@ -662,6 +672,13 @@ void input(const sapp_event* ev) {
                     break;
                 case SAPP_KEYCODE_7:
                     push_key('7', pressed);
+                    break;
+                case SAPP_KEYCODE_Y:
+                case SAPP_KEYCODE_Z:
+                    push_key('y', pressed);
+                    break;
+                case SAPP_KEYCODE_N:
+                    push_key('n', pressed);
                     break;
                 default:
                     consume_event = false;
