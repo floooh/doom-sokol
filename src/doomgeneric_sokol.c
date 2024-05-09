@@ -22,6 +22,7 @@
 #include <assert.h>
 #include "sokol_shaders.glsl.h"
 
+#include <string.h>
 #define MUS_IMPLEMENTATION
 #include "mus.h"
 #define TSF_IMPLEMENTATION
