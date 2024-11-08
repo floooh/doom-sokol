@@ -407,13 +407,11 @@ static void draw_game_frame(void) {
     sg_apply_pipeline(app.gfx.offscreen_pip);
     sg_apply_bindings(&(sg_bindings){
         .vertex_buffers[0] = app.gfx.vbuf,
-        .fs = {
-            .images = {
-                [SLOT_pix_img] = app.gfx.pix_img,
-                [SLOT_pal_img] = app.gfx.pal_img,
-            },
-            .samplers[SLOT_smp] = app.gfx.smp_palettize,
-        }
+        .images = {
+            [IMG_pix_img] = app.gfx.pix_img,
+            [IMG_pal_img] = app.gfx.pal_img,
+        },
+        .samplers[SMP_smp] = app.gfx.smp_palettize,
     });
     sg_draw(0, 3, 1);
     sg_end_pass();
@@ -431,10 +429,8 @@ static void draw_game_frame(void) {
     sg_apply_pipeline(app.gfx.display_pip);
     sg_apply_bindings(&(sg_bindings){
         .vertex_buffers[0] = app.gfx.vbuf,
-        .fs = {
-            .images[SLOT_rgba_img] = app.gfx.rgba_img,
-            .samplers[SLOT_smp] = app.gfx.smp_upscale,
-        },
+        .images[IMG_rgba_img] = app.gfx.rgba_img,
+        .samplers[SMP_smp] = app.gfx.smp_upscale,
     });
     apply_viewport(sapp_widthf(), sapp_heightf());
     sg_draw(0, 3, 1);

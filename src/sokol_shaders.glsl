@@ -11,9 +11,9 @@ void main() {
 // pixel shader to perform color palette lookup
 @fs offscreen_fs
 
-uniform texture2D pix_img;
-uniform texture2D pal_img;
-uniform sampler smp;
+layout(binding=0) uniform texture2D pix_img;
+layout(binding=1) uniform texture2D pal_img;
+layout(binding=0) uniform sampler smp;
 
 in vec2 uv;
 out vec4 frag_color;
@@ -38,8 +38,8 @@ void main() {
 // pixel shader to perform upscale-rendering to display framebuffer
 @fs display_fs
 
-uniform texture2D rgba_img;
-uniform sampler smp;
+layout(binding=0) uniform texture2D rgba_img;
+layout(binding=0) uniform sampler smp;
 in vec2 uv;
 out vec4 frag_color;
 
