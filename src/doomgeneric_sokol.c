@@ -545,10 +545,6 @@ static int AccelerateMouse(int val) {
 }
 
 void input(const sapp_event* ev) {
-    if (ev->type == SAPP_EVENTTYPE_FOCUSED) {
-        sapp_lock_mouse(false);
-        sapp_lock_mouse(true);
-    }
     if (app.state == APP_STATE_WAITING) {
         if ((ev->type == SAPP_EVENTTYPE_KEY_DOWN) ||
             (ev->type == SAPP_EVENTTYPE_MOUSE_DOWN) ||
@@ -558,10 +554,7 @@ void input(const sapp_event* ev) {
         }
     }
     else if (app.state == APP_STATE_RUNNING) {
-        if (menuactive && sapp_mouse_locked()) {
-            sapp_lock_mouse(false);
-        }
-        if (!menuactive && !sapp_mouse_locked()) {
+        if (!sapp_mouse_locked()) {
             sapp_lock_mouse(true);
         }
         if (ev->type == SAPP_EVENTTYPE_UNFOCUSED) {
