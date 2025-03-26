@@ -453,6 +453,15 @@ static void update_game_audio() {
 void frame(void) {
     sfetch_dowork();
 
+    if (app.state == APP_STATE_RUNNING) {
+        if (menuactive && sapp_mouse_locked()) {
+            sapp_lock_mouse(false);
+        }
+        if (!menuactive && !sapp_mouse_locked()) {
+            sapp_lock_mouse(true);
+        }
+    }
+
     // compute frames-per-tick to get us close to the ideal 35 Hz game tick
     // but without skipping ticks
     double frame_time_ms = sapp_frame_duration() * 1000.0;
@@ -554,9 +563,6 @@ void input(const sapp_event* ev) {
         }
     }
     else if (app.state == APP_STATE_RUNNING) {
-        if (!sapp_mouse_locked()) {
-            sapp_lock_mouse(true);
-        }
         if (ev->type == SAPP_EVENTTYPE_UNFOCUSED) {
             // clear all input when window loses focus
             push_key(KEY_UPARROW, false);
