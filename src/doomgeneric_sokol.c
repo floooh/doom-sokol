@@ -202,7 +202,7 @@ void init(void) {
         .width = SCREENWIDTH,
         .height = SCREENHEIGHT,
         .pixel_format = SG_PIXELFORMAT_R8,
-        .usage = SG_USAGE_STREAM,
+        .usage.stream_update = true,
     });
 
     // another dynamic texture for the color palette
@@ -210,17 +210,16 @@ void init(void) {
         .width = 256,
         .height = 1,
         .pixel_format = SG_PIXELFORMAT_RGBA8,
-        .usage = SG_USAGE_STREAM,
+        .usage.stream_update = true,
     });
 
     // an RGBA8 texture to hold the 'color palette expanded' image
     // and source for upscaling with linear filtering
     app.gfx.rgba_img = sg_make_image(&(sg_image_desc){
-        .render_target = true,
+        .usage.render_attachment = true,
         .width = SCREENWIDTH,
         .height = SCREENHEIGHT,
         .pixel_format = SG_PIXELFORMAT_RGBA8,
-        .usage = SG_USAGE_IMMUTABLE,
     });
 
     // a sampler with nearest filtering for the palettization pass
