@@ -79,14 +79,23 @@ static struct {
     uint32_t frame_tick_counter;
     struct {
         sg_buffer vbuf;
-        sg_image pal_img;       // 256x1 palette lookup texture
-        sg_image pix_img;       // 320x200 R8 framebuffer texture
-        sg_image rgba_img;      // 320x200 RGBA8 framebuffer texture
+        struct {                // 256x1 palette lookup image and texture view
+            sg_image img;
+            sg_view tex_view;
+        } pal;
+        struct {                // 320x200 R8 framebuffer image and texture view
+            sg_image img;
+            sg_view tex_view;
+        } pix;
+        struct {                // 320x200 RGBA8 framebuffer image, texture- and attachment-view
+            sg_image img;
+            sg_view tex_view;
+            sg_view att_view;
+        } rgba;
         sg_sampler smp_palettize;   // sampler for the palettization pass
         sg_sampler smp_upscale;     // sampler for the upscale pass
         sg_pipeline offscreen_pip;
         sg_pipeline display_pip;
-        sg_attachments offscreen_attachments;
     } gfx;
     struct {
         key_state_t key_queue[KEY_QUEUE_SIZE];
@@ -197,29 +206,41 @@ void init(void) {
         .data = SG_RANGE(verts),
     });
 
-    // a dynamic texture for Doom's framebuffer
-    app.gfx.pix_img = sg_make_image(&(sg_image_desc){
+    // a dynamic image and texture view for Doom's framebuffer
+    app.gfx.pix.img = sg_make_image(&(sg_image_desc){
         .width = SCREENWIDTH,
         .height = SCREENHEIGHT,
         .pixel_format = SG_PIXELFORMAT_R8,
         .usage.stream_update = true,
     });
+    app.gfx.pix.tex_view = sg_make_view(&(sg_view_desc){
+        .texture.image = app.gfx.pix.img,
+    });
 
-    // another dynamic texture for the color palette
-    app.gfx.pal_img = sg_make_image(&(sg_image_desc){
+    // another dynamic image and texture view for the color palette
+    app.gfx.pal.img = sg_make_image(&(sg_image_desc){
         .width = 256,
         .height = 1,
         .pixel_format = SG_PIXELFORMAT_RGBA8,
         .usage.stream_update = true,
     });
+    app.gfx.pal.tex_view = sg_make_view(&(sg_view_desc){
+        .texture.image = app.gfx.pal.img,
+    });
 
-    // an RGBA8 texture to hold the 'color palette expanded' image
-    // and source for upscaling with linear filtering
-    app.gfx.rgba_img = sg_make_image(&(sg_image_desc){
-        .usage.render_attachment = true,
+    // an RGBA8 image, texture view and color-attachment view to hold the
+    // 'color palette expanded' image and source for upscaling with linear filtering
+    app.gfx.rgba.img = sg_make_image(&(sg_image_desc){
+        .usage.color_attachment = true,
         .width = SCREENWIDTH,
         .height = SCREENHEIGHT,
         .pixel_format = SG_PIXELFORMAT_RGBA8,
+    });
+    app.gfx.rgba.tex_view = sg_make_view(&(sg_view_desc){
+        .texture.image = app.gfx.rgba.img,
+    });
+    app.gfx.rgba.att_view = sg_make_view(&(sg_view_desc){
+        .color_attachment.image = app.gfx.rgba.img,
     });
 
     // a sampler with nearest filtering for the palettization pass
@@ -266,11 +287,6 @@ void init(void) {
             .write_enabled = false,
             .compare = SG_COMPAREFUNC_ALWAYS,
         },
-    });
-
-    // a render pass attachments object for the offscreen pass
-    app.gfx.offscreen_attachments = sg_make_attachments(&(sg_attachments_desc){
-        .colors[0].image = app.gfx.rgba_img,
     });
 
     // start loading the DOOM1.WAD and soundfont files, the game start will be delayed
@@ -385,13 +401,13 @@ static void apply_viewport(float canvas_width, float canvas_height) {
 // copy the Doom framebuffer into sokol-gfx texture and render to display
 static void draw_game_frame(void) {
     // update pixel and palette textures
-    sg_update_image(app.gfx.pix_img, &(sg_image_data){
+    sg_update_image(app.gfx.pix.img, &(sg_image_data){
         .subimage[0][0] = {
             .ptr = I_VideoBuffer,
             .size = SCREENWIDTH * SCREENHEIGHT,
         }
     });
-    sg_update_image(app.gfx.pal_img, &(sg_image_data){
+    sg_update_image(app.gfx.pal.img, &(sg_image_data){
         .subimage[0][0] = {
             .ptr = I_GetPalette(),
             .size = 256 * sizeof(uint32_t)
@@ -401,14 +417,14 @@ static void draw_game_frame(void) {
     // offscreen render pass to perform color palette lookup
     sg_begin_pass(&(sg_pass){
         .action = { .colors[0] = { .load_action = SG_LOADACTION_DONTCARE } },
-        .attachments = app.gfx.offscreen_attachments,
+        .attachments = { .colors[0] = app.gfx.rgba.att_view },
     });
     sg_apply_pipeline(app.gfx.offscreen_pip);
     sg_apply_bindings(&(sg_bindings){
         .vertex_buffers[0] = app.gfx.vbuf,
-        .images = {
-            [IMG_pix_img] = app.gfx.pix_img,
-            [IMG_pal_img] = app.gfx.pal_img,
+        .views = {
+            [VIEW_pix_img] = app.gfx.pix.tex_view,
+            [VIEW_pal_img] = app.gfx.pal.tex_view,
         },
         .samplers[SMP_smp] = app.gfx.smp_palettize,
     });
@@ -428,7 +444,7 @@ static void draw_game_frame(void) {
     sg_apply_pipeline(app.gfx.display_pip);
     sg_apply_bindings(&(sg_bindings){
         .vertex_buffers[0] = app.gfx.vbuf,
-        .images[IMG_rgba_img] = app.gfx.rgba_img,
+        .views[VIEW_rgba_img] = app.gfx.rgba.tex_view,
         .samplers[SMP_smp] = app.gfx.smp_upscale,
     });
     apply_viewport(sapp_widthf(), sapp_heightf());
