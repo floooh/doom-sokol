@@ -402,13 +402,13 @@ static void apply_viewport(float canvas_width, float canvas_height) {
 static void draw_game_frame(void) {
     // update pixel and palette textures
     sg_update_image(app.gfx.pix.img, &(sg_image_data){
-        .subimage[0][0] = {
+        .mip_levels[0] = {
             .ptr = I_VideoBuffer,
             .size = SCREENWIDTH * SCREENHEIGHT,
         }
     });
     sg_update_image(app.gfx.pal.img, &(sg_image_data){
-        .subimage[0][0] = {
+        .mip_levels[0] = {
             .ptr = I_GetPalette(),
             .size = 256 * sizeof(uint32_t)
         }
