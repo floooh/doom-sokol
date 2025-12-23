@@ -26,11 +26,11 @@ export function configure(c: Configurer) {
 export function build(b: Builder) {
     // a little helper library to obtain the macos app resource path
     b.addTarget("fileutil", "lib", (t) => {
-        t.setDir('src/fileutil');
+        t.setDir("src/fileutil");
         if (b.isMacOS()) {
-            t.addSource('fileutil_osx.m');
+            t.addSource("fileutil_osx.m");
         } else {
-            t.addSource('fileutil.c');
+            t.addSource("fileutil.c");
         }
     });
 
