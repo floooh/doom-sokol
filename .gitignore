@@ -1,8 +1,6 @@
-#>fips
-# this area is managed by fips, do not edit
-.fips-*
-*.pyc
 .vscode/
 .idea/
+.fibs/
+CMakeLists.txt
 CMakeUserPresets.json
-#<fips
+CMakePresets.json

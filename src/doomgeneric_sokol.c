@@ -21,6 +21,7 @@
 #include "doomkeys.h"
 #include <assert.h>
 #include "sokol_shaders.glsl.h"
+#include "fileutil/fileutil.h"
 
 #include <string.h>
 #define MUS_IMPLEMENTATION
@@ -293,13 +294,14 @@ void init(void) {
     // until loading has finished (see the frame() callback below)
     // NOTE: those files have .wasm extension only so that they are compressed
     // by web servers, they are not actually WASM files!
+    char path_buf[512];
     sfetch_send(&(sfetch_request_t){
-        .path = "doom1.wad.wasm",
+        .path = fileutil_get_path("doom1.wad.wasm", path_buf, sizeof(path_buf)),
         .callback = wad_fetch_callback,
         .buffer = SFETCH_RANGE(app.data.wad.buf),
     });
     sfetch_send(&(sfetch_request_t){
-        .path = "aweromgm.sf2.wasm",
+        .path = fileutil_get_path("aweromgm.sf2.wasm", path_buf, sizeof(path_buf)),
         .callback = sf_fetch_callback,
         .buffer = SFETCH_RANGE(app.data.sf.buf),
     });
