@@ -36,7 +36,7 @@ export function build(b: Builder) {
 
     // the actual doom executable
     b.addTarget("doom", "windowed-exe", (t) => {
-        const shdcOutDir = b.targetBuildDir(t.name());
+        const shdcOutDir = t.buildDir();
         t.setDir("src");
         t.addSources(sources);
         t.addDependencies(["sokol", "fileutil"]);
