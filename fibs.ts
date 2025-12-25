@@ -1,11 +1,20 @@
 import {
     Builder,
     Configurer,
+    Project,
     main,
+    log,
+    proj,
+    conf,
 } from "https://raw.githubusercontent.com/floooh/fibs/master/index.ts";
 main(import.meta);
 
 export function configure(c: Configurer) {
+    c.addCommand({
+        name: 'webpage',
+        help: webpageCmdHelp,
+        run: webpageCmdRun,
+    });
     c.addImport({
         name: "libs",
         url: "https://github.com/floooh/fibs-libs",
@@ -168,3 +177,18 @@ const sources = [
     "i_video.c",
     "doomgeneric.c",
 ];
+
+function webpageCmdHelp() {
+    log.helpCmd([
+        'webpage build',
+        'webpage serve',
+    ], 'build or serve doom webpage');
+}
+
+async function webpageCmdRun(p: Project) {
+    // FIXME FIXME FIXME
+    const c = p.config('emsc-ninja-release');
+    await conf.validate(p, c, {});
+    await proj.generate(c);
+    await proj.build({});
+}
