@@ -5,8 +5,8 @@ import {
     main,
     log,
     proj,
-    conf,
 } from "https://raw.githubusercontent.com/floooh/fibs/master/index.ts";
+import * as fs from 'jsr:@std/fs';
 main(import.meta);
 
 export function configure(c: Configurer) {
@@ -60,6 +60,9 @@ export function build(b: Builder) {
             args: { src: "sokol_shaders.glsl", outDir: shdcOutDir },
         });
         t.addIncludeDirectories([shdcOutDir]);
+        if (b.isEmscripten()) {
+            t.addLinkOptions([`--shell-file=${b.projectDir()}/src/shell.html`]);
+        }
         if (b.isGcc() || b.isClang()) {
             t.addCompileOptions([
                 "-Wno-unknown-warning-option",
@@ -185,10 +188,32 @@ function webpageCmdHelp() {
     ], 'build or serve doom webpage');
 }
 
-async function webpageCmdRun(p: Project) {
-    // FIXME FIXME FIXME
-    const c = p.config('emsc-ninja-release');
-    await conf.validate(p, c, {});
-    await proj.generate(c);
-    await proj.build({});
+async function webpageCmdRun(p: Project, args: string[]) {
+    const configName = 'emsc-ninja-release';
+    const config = p.config(configName);
+    const srcDir = p.targetDistDir('doom', configName);
+    const dstDir = `${p.fibsDir()}/webpage`;
+    if (args[1] === 'build') {
+        if (fs.existsSync(dstDir)) {
+            if (log.ask(`Ok to delete directory ${dstDir}?`, false)) {
+                Deno.removeSync(dstDir, { recursive: true });
+            }
+        }
+        fs.ensureDirSync(dstDir);
+        await proj.generate(config);
+        await proj.build({ forceRebuild: true });
+        const files: string[][] = [
+            [ 'doom.html', 'index.html' ],
+            [ 'aweromgm.sf2.wasm', 'aweromgm.sf2.wasm' ],
+            [ 'doom.js', 'doom.js'],
+            [ 'doom.wasm', 'doom.wasm' ],
+            [ 'doom1.wad.wasm', 'doom1.wad.wasm' ],
+        ];
+        await Promise.all(files.map(([src, dst]) => fs.copy(`${srcDir}/${src}`, `${dstDir}/${dst}`)));
+    } else if (args[1] === 'serve') {
+        const emsc = await import(`file://${p.importDir('platforms')}/emscripten.ts`);
+        emsc.emrun(p, { cwd: dstDir, file: 'index.html' });
+    } else {
+        log.panic(`expected 'build' or 'serve' option (run 'fibs help webpage')`);
+    }
 }
