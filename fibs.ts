@@ -78,6 +78,15 @@ export function build(b: Builder) {
         }
         if (b.isMsvc()) {
             t.addCompileOptions([
+                "/wd4210", // nonstandard extension used
+                "/wd4152", // ditto
+                "/wd4100", // unreferenced parameter
+                "/wd4459", // declaration of 'x' hides global declaration
+                "/wd4127", // conditional expression is constant
+                "/wd4702", // unreachable code
+                "/wd4245", // conversion from 'int' to 'size_t'
+                "/wd4389", // signed/unsigned mismatch
+                "/wd4295", // array is too small to contain a terminating null character
                 "/wd4244",
                 "/wd4267", // conversion from 'xxx' to 'yyy' possible loss of data
                 "/wd4146", // unary minus perator applied to unsigned type, result still unsigned
