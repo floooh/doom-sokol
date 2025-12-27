@@ -15,43 +15,59 @@ Also uses:
 
 Prerequisites:
 
-- cmake 3.x
-- python 2.7.x or 3.x
+- cmake 3.21+
+- deno 2.6+ (https://docs.deno.com/runtime/getting_started/installation/)
 - on Windows: a somewhat recent Visual Studio version
 - on macOS: a somewhat recent Xcode version and command line tools
-- on Linux and for the WASM build: make
+- on Linux, for VSCode support and for the WASM build: ninja
 - on Linux: X11, OpenGL and ALSA development packages
 
-On Windows, Linux or macOS:
-
+Install 'fibs' globally via deno:
 ```sh
-mkdir workspace
-cd workspace
-git clone https://github.com/floooh/doom-sokol
-cd doom-sokol
-./fips build
-./fips run doom
+deno install --global --allow-all --no-config jsr:@floooh/fibs
 ```
 
-To open the project in Visual Studio or Xcode, do this instead:
-
+Then clone, build and run:
 ```sh
-mkdir workspace
-cd workspace
 git clone https://github.com/floooh/doom-sokol
 cd doom-sokol
-./fips gen
-./fips open
+fibs build
+fibs run doom
+```
+
+To open the project in Visual Studio, VSCode or Xcode configure
+with one of the following build configs:
+```sh
+git clone https://github.com/floooh/doom-sokol
+cd doom-sokol
+# on Windows with Visual Studio:
+fibs config win-vstudio-debug
+# on Windows with VSCode:
+fibs config win-vscode-debug
+# on macOS with Xcode:
+fibs config macos-xcode-debug
+# on macOS with VSCode:
+fibs config macos-vscode-debug
+# on Linux with VSCode:
+fibs config linux-vscode-debug
+# ...and open in the above IDE
+fibs open
 ```
 
 To build the web version (in the doom-sokol directory):
-
 ```sh
-./fips setup emscripten
-./fips set config wasm-make-release
-./fips build
-./fips run doom
+fibs emsdk install
+fibs config emsc-ninja-release
+fibs build
+fibs run doom
 ```
+
+...or alternatively:
+```sh
+fibs webpage build
+fibs webpage serve
+```
+
 
 # Porting Notes
 
@@ -88,7 +104,7 @@ Next, [two asynchronous load operations are started](https://github.com/floooh/d
 It's important to note that Doom itself isn't initialized yet, this is delayed until
 all data has finished loading.
 
-Finally the 'application state' is set to 'loading', which concludes the sokol_app.h 
+Finally the 'application state' is set to 'loading', which concludes the sokol_app.h
 initialization function.
 
 This is a good time to talk about the general application structure:
@@ -96,7 +112,7 @@ This is a good time to talk about the general application structure:
 All sokol-port-specific state lives in a [single nested data structure](https://github.com/floooh/doom-sokol/blob/204ee61021e311695c038e4a7529531b98a58ebb/src/doomgeneric_sokol.c#L75-L129) which is only
 accessible from within the doomgeneric_sokol.c source file.
 
-The application goes through several states before running any actual 
+The application goes through several states before running any actual
 Doom code:
 
 - The first state is ```LOADING```, this is active as long as the asynchronous
@@ -107,7 +123,7 @@ Doom code:
   with an error message.
 - Once [loading has successfully finished](https://github.com/floooh/doom-sokol/blob/204ee61021e311695c038e4a7529531b98a58ebb/src/doomgeneric_sokol.c#L132-L138), the application will switch into the
   ```WAITING``` state. This shows the usual intro screen and the message
-  'Press any key to start game'. 
+  'Press any key to start game'.
 - When [a key (or mouse button) is pressed](https://github.com/floooh/doom-sokol/blob/204ee61021e311695c038e4a7529531b98a58ebb/src/doomgeneric_sokol.c#L531-L538), the application will switch into the
   ```INIT``` state. This is where the actual [Doom initialization code](https://github.com/floooh/doom-sokol/blob/204ee61021e311695c038e4a7529531b98a58ebb/src/doomgeneric_sokol.c#L455-L460) runs, the application state switches to ```RUNNING```, and [this is finally](https://github.com/floooh/doom-sokol/blob/204ee61021e311695c038e4a7529531b98a58ebb/src/doomgeneric_sokol.c#L461-L477) where the actual game code runs frame after frame.
 
@@ -130,7 +146,7 @@ Let's start at the top:
 
 - The top level ```while (1) { ... }``` loop in the ```D_DoomLoop()``` function has been [removed](https://github.com/floooh/doom-sokol/blob/b2d24da87d7fcc2646cf7a8bdcb2371954fb6c36/src/d_main.c#L434-L450) and moved into a new [D_DoomFrame()](https://github.com/floooh/doom-sokol/blob/b2d24da87d7fcc2646cf7a8bdcb2371954fb6c36/src/d_main.c#L453-L467) function.
 
-- The [TryRunTics() function](https://github.com/floooh/doom-sokol/blob/7f7a6777dc15b4553f68423e6eb3bcda1a898167/src/d_loop.c#L714-L842) has been gutted so that it always runs one game tick per invocation and no longer attempts to adjust the number of executed game tics to 
+- The [TryRunTics() function](https://github.com/floooh/doom-sokol/blob/7f7a6777dc15b4553f68423e6eb3bcda1a898167/src/d_loop.c#L714-L842) has been gutted so that it always runs one game tick per invocation and no longer attempts to adjust the number of executed game tics to
 the wall clock time.
 
 - The [D_Display() function](https://github.com/floooh/doom-sokol/blob/b2d24da87d7fcc2646cf7a8bdcb2371954fb6c36/src/d_main.c#L166-L180) has been turned into a simple state machine which either renders
@@ -152,11 +168,11 @@ rate.
 
 ## File IO and WAD loading
 
-There's a *lot* of not really relevant file IO in the original Doom code base for WAD file 
-discovery, configuration files, savegames and some other unimportant things which I simply 
+There's a *lot* of not really relevant file IO in the original Doom code base for WAD file
+discovery, configuration files, savegames and some other unimportant things which I simply
 commented out or disabled otherwise.
 
-The only really relevant file IO code is reading data from a single WAD file. This 
+The only really relevant file IO code is reading data from a single WAD file. This
 has been ported by first loading a WAD file asynchronously into memory before the
 game starts, and then replacing the C-runtime file IO functions with equivalent
 functions that work on a memory buffer instead of a filesystem file.
@@ -175,7 +191,7 @@ referencing a 256 entry color palette.
 fbDoom [converts the Mode13 framebuffer into an RGBA framebuffer](https://github.com/maximevince/fbDOOM/blob/476a0cef4a3068015f85993bc916fca38bc2d970/fbdoom/i_video_fbdev.c#L134-L159) with 32 bits
 per pixel, and doomgeneric replaces the [Linux framebuffer write](https://github.com/maximevince/fbDOOM/blob/476a0cef4a3068015f85993bc916fca38bc2d970/fbdoom/i_video_fbdev.c#L445-L446) with a [callback function](https://github.com/ozkl/doomgeneric/blob/2d9b24f07c78c36becf41d89db30fa99863463e5/doomgeneric/i_video.c#L294).
 
-In the Sokol port I'm skipping all the additional code in fbDoom and doomgeneric, and 
+In the Sokol port I'm skipping all the additional code in fbDoom and doomgeneric, and
 use sokol_gfx.h for the color palette lookup and rendering the resulting RGBA8
 texture to the display.
 
@@ -242,7 +258,7 @@ sample stream by glueing the ```mus.h``` library which parses the MUS file data 
 TinySoundFont library which 'realizes' MUS events and 'renders' a sample stream which is
 mixed into the previously generated sound effect sample stream.
 
-The final missing piece of the sound code is the [update_game_audio() function](https://github.com/floooh/doom-sokol/blob/914fd54fe6724e822e4404a8f301b30ec419e8bd/src/doomgeneric_sokol.c#L426-L434). This is 
+The final missing piece of the sound code is the [update_game_audio() function](https://github.com/floooh/doom-sokol/blob/914fd54fe6724e822e4404a8f301b30ec419e8bd/src/doomgeneric_sokol.c#L426-L434). This is
 called once per frame (not per game tick) by the sokol_app.h frame callback, generates the
 required number of stereo samples for sound effects and music, and finally pushes the
 generated stereo sample stream into sokol_audio.h for playback.

@@ -1,17 +1,9 @@
-import {
-    Builder,
-    Configurer,
-    Project,
-    main,
-    log,
-    proj,
-} from "https://raw.githubusercontent.com/floooh/fibs/master/index.ts";
-import * as fs from 'jsr:@std/fs';
-main(import.meta);
+import { Builder, Configurer, log, proj, Project } from "jsr:@floooh/fibs";
+import * as fs from "jsr:@std/fs";
 
 export function configure(c: Configurer) {
     c.addCommand({
-        name: 'webpage',
+        name: "webpage",
         help: webpageCmdHelp,
         run: webpageCmdRun,
     });
@@ -183,17 +175,17 @@ const sources = [
 
 function webpageCmdHelp() {
     log.helpCmd([
-        'webpage build',
-        'webpage serve',
-    ], 'build or serve doom webpage');
+        "webpage build",
+        "webpage serve",
+    ], "build or serve doom webpage");
 }
 
 async function webpageCmdRun(p: Project, args: string[]) {
-    const configName = 'emsc-ninja-release';
+    const configName = "emsc-ninja-release";
     const config = p.config(configName);
-    const srcDir = p.targetDistDir('doom', configName);
+    const srcDir = p.targetDistDir("doom", configName);
     const dstDir = `${p.fibsDir()}/webpage`;
-    if (args[1] === 'build') {
+    if (args[1] === "build") {
         if (fs.existsSync(dstDir)) {
             if (log.ask(`Ok to delete directory ${dstDir}?`, false)) {
                 Deno.removeSync(dstDir, { recursive: true });
@@ -203,17 +195,25 @@ async function webpageCmdRun(p: Project, args: string[]) {
         await proj.generate(config);
         await proj.build({ forceRebuild: true });
         const files: string[][] = [
-            [ 'doom.html', 'index.html' ],
-            [ 'aweromgm.sf2.wasm', 'aweromgm.sf2.wasm' ],
-            [ 'doom.js', 'doom.js'],
-            [ 'doom.wasm', 'doom.wasm' ],
-            [ 'doom1.wad.wasm', 'doom1.wad.wasm' ],
+            ["doom.html", "index.html"],
+            ["aweromgm.sf2.wasm", "aweromgm.sf2.wasm"],
+            ["doom.js", "doom.js"],
+            ["doom.wasm", "doom.wasm"],
+            ["doom1.wad.wasm", "doom1.wad.wasm"],
         ];
-        await Promise.all(files.map(([src, dst]) => fs.copy(`${srcDir}/${src}`, `${dstDir}/${dst}`)));
-    } else if (args[1] === 'serve') {
-        const emsc = await import(`file://${p.importDir('platforms')}/emscripten.ts`);
-        emsc.emrun(p, { cwd: dstDir, file: 'index.html' });
+        await Promise.all(
+            files.map(([src, dst]) =>
+                fs.copy(`${srcDir}/${src}`, `${dstDir}/${dst}`)
+            ),
+        );
+    } else if (args[1] === "serve") {
+        const emsc = await import(
+            `file://${p.importDir("platforms")}/emscripten.ts`
+        );
+        emsc.emrun(p, { cwd: dstDir, file: "index.html" });
     } else {
-        log.panic(`expected 'build' or 'serve' option (run 'fibs help webpage')`);
+        log.panic(
+            `expected 'build' or 'serve' option (run 'fibs help webpage')`,
+        );
     }
 }
