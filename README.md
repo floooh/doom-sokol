@@ -22,17 +22,13 @@ Prerequisites:
 - on Linux, for VSCode support and for the WASM build: ninja
 - on Linux: X11, OpenGL and ALSA development packages
 
-Install 'fibs' globally via deno:
-```sh
-deno install --global --allow-all --no-config jsr:@floooh/fibs
-```
+Clone, build and run:
 
-Then clone, build and run:
 ```sh
 git clone https://github.com/floooh/doom-sokol
 cd doom-sokol
-fibs build
-fibs run doom
+./fibs build
+./fibs run doom
 ```
 
 To open the project in Visual Studio, VSCode or Xcode configure
@@ -41,31 +37,31 @@ with one of the following build configs:
 git clone https://github.com/floooh/doom-sokol
 cd doom-sokol
 # on Windows with Visual Studio:
-fibs config win-vstudio-debug
+./fibs config win-vstudio-debug
 # on Windows with VSCode:
-fibs config win-vscode-debug
+./fibs config win-vscode-debug
 # on macOS with Xcode:
-fibs config macos-xcode-debug
+./fibs config macos-xcode-debug
 # on macOS with VSCode:
-fibs config macos-vscode-debug
+./fibs config macos-vscode-debug
 # on Linux with VSCode:
-fibs config linux-vscode-debug
+./fibs config linux-vscode-debug
 # ...and open in the above IDE
-fibs open
+./fibs open
 ```
 
 To build the web version (in the doom-sokol directory):
 ```sh
-fibs emsdk install
-fibs config emsc-ninja-release
-fibs build
-fibs run doom
+./fibs emsdk install
+./fibs config emsc-ninja-release
+./fibs build
+./fibs run doom
 ```
 
 ...or alternatively:
 ```sh
-fibs webpage build
-fibs webpage serve
+./fibs webpage build
+./fibs webpage serve
 ```
 
 

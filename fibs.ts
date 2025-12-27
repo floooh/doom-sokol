@@ -1,5 +1,6 @@
+// deno-lint-ignore-file no-unversioned-import
 import { Builder, Configurer, log, proj, Project } from "jsr:@floooh/fibs";
-import * as fs from "jsr:@std/fs";
+import { existsSync, ensureDirSync, copy } from "jsr:@std/fs";
 
 export function configure(c: Configurer) {
     c.addCommand({
@@ -195,12 +196,12 @@ async function webpageCmdRun(p: Project, args: string[]) {
     const srcDir = p.targetDistDir("doom", configName);
     const dstDir = `${p.fibsDir()}/webpage`;
     if (args[1] === "build") {
-        if (fs.existsSync(dstDir)) {
+        if (existsSync(dstDir)) {
             if (log.ask(`Ok to delete directory ${dstDir}?`, false)) {
                 Deno.removeSync(dstDir, { recursive: true });
             }
         }
-        fs.ensureDirSync(dstDir);
+        ensureDirSync(dstDir);
         await proj.generate(config);
         await proj.build({ forceRebuild: true });
         const files: string[][] = [
@@ -212,7 +213,7 @@ async function webpageCmdRun(p: Project, args: string[]) {
         ];
         await Promise.all(
             files.map(([src, dst]) =>
-                fs.copy(`${srcDir}/${src}`, `${dstDir}/${dst}`)
+                copy(`${srcDir}/${src}`, `${dstDir}/${dst}`)
             ),
         );
     } else if (args[1] === "serve") {
