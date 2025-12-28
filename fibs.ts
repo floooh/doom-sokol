@@ -217,9 +217,7 @@ async function webpageCmdRun(p: Project, args: string[]) {
             ),
         );
     } else if (args[1] === "serve") {
-        const emsc = await import(
-            `file://${p.importDir("platforms")}/emscripten.ts`
-        );
+        const emsc = p.importModule("platforms", "emscripten.ts");
         emsc.emrun(p, { cwd: dstDir, file: "index.html" });
     } else {
         log.panic(
