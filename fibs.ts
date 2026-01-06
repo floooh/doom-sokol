@@ -1,6 +1,5 @@
-// deno-lint-ignore-file no-unversioned-import
-import { Builder, Configurer, log, proj, Project } from "jsr:@floooh/fibs";
-import { existsSync, ensureDirSync, copy } from "jsr:@std/fs";
+import { Builder, Configurer, log, proj, Project } from "jsr:@floooh/fibs@^1";
+import { existsSync, ensureDirSync, copy } from "jsr:@std/fs@^1";
 
 export function configure(c: Configurer) {
     c.addCommand({
