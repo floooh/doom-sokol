@@ -13,14 +13,15 @@ export function configure(c: Configurer) {
         files: ["sokol.ts"],
     });
     c.addImport({
-        name: "platforms",
-        url: "https://github.com/floooh/fibs-platforms",
-        files: ["emscripten.ts", "macos.ts"],
-    });
-    c.addImport({
-        name: "utils",
-        url: "https://github.com/floooh/fibs-utils",
-        files: ["stdoptions.ts", "copyfiles.ts", "sokolshdc.ts"],
+        name: "extras",
+        url: "https://github.com/floooh/fibs-extras",
+        files: [
+            "emscripten.ts",
+            "macos.ts",
+            "copyfiles.ts",
+            "sokolshdc.ts",
+            "stdoptions.ts",
+        ],
     });
 }
 
