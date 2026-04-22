@@ -10,6 +10,7 @@
 #include "sokol_fetch.h"
 #include "sokol_audio.h"
 #include "sokol_log.h"
+#include "sokol_letterbox.h"
 #include "sokol_glue.h"
 #include "m_argv.h"
 #include "d_event.h"
@@ -380,24 +381,14 @@ static void draw_greeting_screen(void) {
 
 // helper function to adjust aspect ratio
 static void apply_viewport(float canvas_width, float canvas_height) {
-    const float canvas_aspect = canvas_width / canvas_height;
     const float doom_width = (float)SCREENWIDTH;
     const float doom_height = (float)SCREENHEIGHT;
-    const float doom_aspect = doom_width / doom_height;
-    float vp_x, vp_y, vp_w, vp_h;
-    if (doom_aspect < canvas_aspect) {
-        vp_y = 0.0f;
-        vp_h = canvas_height;
-        vp_w = canvas_height * doom_aspect;
-        vp_x = (canvas_width - vp_w) / 2;
-    }
-    else {
-        vp_x = 0.0f;
-        vp_w = canvas_width;
-        vp_h = canvas_width / doom_aspect;
-        vp_y = (canvas_height - vp_h) / 2;
-    }
-    sg_apply_viewport(vp_x, vp_y, vp_w, vp_h, true);
+    const int cw = (int)canvas_width;
+    const int ch = (int)canvas_height;
+    slbx_viewport vp = slbx_letterbox(cw, ch, &(slbx_letterbox_desc){
+        .content_aspect_ratio = doom_width / doom_height,
+    });
+    sg_apply_viewport(vp.x, vp.y, vp.width, vp.height, true);
 }
 
 // copy the Doom framebuffer into sokol-gfx texture and render to display
