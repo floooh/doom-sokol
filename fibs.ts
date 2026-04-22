@@ -220,7 +220,7 @@ async function webpageCmdRun(p: Project, args: string[]) {
             ),
         );
     } else if (args[1] === "serve") {
-        const emsc = p.importModule("platforms", "emscripten.ts");
+        const emsc = p.importModule("extras", "emscripten.ts");
         emsc.emrun(p, { cwd: dstDir, file: "index.html" });
     } else {
         throw new Error(`expected 'build' or 'serve' option (run 'fibs help webpage')`);
