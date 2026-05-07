@@ -20,7 +20,6 @@ export function configure(c: Configurer) {
             "macos.ts",
             "windows.ts",
             "copyfiles.ts",
-            "sokolshdc.ts",
             "stdoptions.ts",
             "linux-threads.ts",
             "vscode.ts",
@@ -41,7 +40,6 @@ export function build(b: Builder) {
 
     // the actual doom executable
     b.addTarget("doom", "windowed-exe", (t) => {
-        const shdcOutDir = t.buildDir();
         t.setDir("src");
         t.addSources(sources);
         t.addDependencies(["sokol", "fileutil"]);
@@ -51,11 +49,6 @@ export function build(b: Builder) {
                 files: ["doom1.wad.wasm", "aweromgm.sf2.wasm"],
             },
         });
-        t.addJob({
-            job: "sokolshdc",
-            args: { src: "sokol_shaders.glsl", outDir: shdcOutDir },
-        });
-        t.addIncludeDirectories([shdcOutDir]);
         if (b.isEmscripten()) {
             t.addLinkOptions([`--shell-file=${b.projectDir()}/src/shell.html`]);
         }
