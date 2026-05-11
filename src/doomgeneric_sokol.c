@@ -11,6 +11,7 @@
 #include "sokol_audio.h"
 #include "sokol_log.h"
 #include "sokol_letterbox.h"
+#include "sokol_framebuffer.h"
 #include "sokol_glue.h"
 #include "m_argv.h"
 #include "d_event.h"
@@ -21,7 +22,6 @@
 #include "doomgeneric.h"
 #include "doomkeys.h"
 #include <assert.h>
-#include "sokol_shaders.glsl.h"
 #include "fileutil/fileutil.h"
 
 #include <string.h>
@@ -46,6 +46,7 @@ void dg_Create();
 #define MIXBUFFERSIZE (MAXSAMPLECOUNT * 2)
 #define MAX_WAD_SIZE (6 * 1024 * 1024)
 #define MAX_SOUNDFONT_SIZE (2 * 1024 * 1024)
+#define BORDER (10)
 
 typedef enum {
     APP_STATE_LOADING,
@@ -80,24 +81,7 @@ static struct {
     uint32_t frames_per_tick;   // number of frames per game tick
     uint32_t frame_tick_counter;
     struct {
-        sg_buffer vbuf;
-        struct {                // 256x1 palette lookup image and texture view
-            sg_image img;
-            sg_view tex_view;
-        } pal;
-        struct {                // 320x200 R8 framebuffer image and texture view
-            sg_image img;
-            sg_view tex_view;
-        } pix;
-        struct {                // 320x200 RGBA8 framebuffer image, texture- and attachment-view
-            sg_image img;
-            sg_view tex_view;
-            sg_view att_view;
-        } rgba;
-        sg_sampler smp_palettize;   // sampler for the palettization pass
-        sg_sampler smp_upscale;     // sampler for the upscale pass
-        sg_pipeline offscreen_pip;
-        sg_pipeline display_pip;
+        sfb_framebuffer fb;
     } gfx;
     struct {
         key_state_t key_queue[KEY_QUEUE_SIZE];
@@ -179,6 +163,10 @@ void init(void) {
         .environment = sglue_environment(),
         .logger.func = slog_func,
     });
+    sfb_setup(&(sfb_desc){
+        .framebuffer_pool_size = 1,
+        .logger.func = slog_func,
+    });
     sdtx_setup(&(sdtx_desc_t){
         .context_pool_size = 1,
         .fonts[0] = sdtx_font_kc854(),
@@ -198,97 +186,12 @@ void init(void) {
         .logger.func = slog_func,
     });
 
-    // a vertex buffer to render a fullscreen triangle
-    const float verts[] = {
-        0.0f, 0.0f,
-        2.0f, 0.0f,
-        0.0f, 2.0f
-    };
-    app.gfx.vbuf = sg_make_buffer(&(sg_buffer_desc){
-        .data = SG_RANGE(verts),
-    });
-
-    // a dynamic image and texture view for Doom's framebuffer
-    app.gfx.pix.img = sg_make_image(&(sg_image_desc){
+    // create framebuffer object
+    app.gfx.fb = sfb_make_framebuffer(&(sfb_framebuffer_desc){
         .width = SCREENWIDTH,
         .height = SCREENHEIGHT,
-        .pixel_format = SG_PIXELFORMAT_R8,
-        .usage.stream_update = true,
-    });
-    app.gfx.pix.tex_view = sg_make_view(&(sg_view_desc){
-        .texture.image = app.gfx.pix.img,
-    });
-
-    // another dynamic image and texture view for the color palette
-    app.gfx.pal.img = sg_make_image(&(sg_image_desc){
-        .width = 256,
-        .height = 1,
-        .pixel_format = SG_PIXELFORMAT_RGBA8,
-        .usage.stream_update = true,
-    });
-    app.gfx.pal.tex_view = sg_make_view(&(sg_view_desc){
-        .texture.image = app.gfx.pal.img,
-    });
-
-    // an RGBA8 image, texture view and color-attachment view to hold the
-    // 'color palette expanded' image and source for upscaling with linear filtering
-    app.gfx.rgba.img = sg_make_image(&(sg_image_desc){
-        .usage.color_attachment = true,
-        .width = SCREENWIDTH,
-        .height = SCREENHEIGHT,
-        .pixel_format = SG_PIXELFORMAT_RGBA8,
-    });
-    app.gfx.rgba.tex_view = sg_make_view(&(sg_view_desc){
-        .texture.image = app.gfx.rgba.img,
-    });
-    app.gfx.rgba.att_view = sg_make_view(&(sg_view_desc){
-        .color_attachment.image = app.gfx.rgba.img,
-    });
-
-    // a sampler with nearest filtering for the palettization pass
-    app.gfx.smp_palettize = sg_make_sampler(&(sg_sampler_desc){
-        .min_filter = SG_FILTER_NEAREST,
-        .mag_filter = SG_FILTER_NEAREST,
-        .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
-        .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
-    });
-
-    // a sampler with linear filtering for the upscaling pass
-    app.gfx.smp_upscale = sg_make_sampler(&(sg_sampler_desc){
-        .min_filter = SG_FILTER_LINEAR,
-        .mag_filter = SG_FILTER_LINEAR,
-        .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
-        .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
-    });
-
-    // a pipeline object for the offscreen render pass which
-    // performs the color palette lookup
-    app.gfx.offscreen_pip = sg_make_pipeline(&(sg_pipeline_desc){
-        .shader = sg_make_shader(offscreen_shader_desc(sg_query_backend())),
-        .layout = {
-            .attrs[0].format = SG_VERTEXFORMAT_FLOAT2
-        },
-        .cull_mode = SG_CULLMODE_NONE,
-        .depth = {
-            .write_enabled = false,
-            .compare = SG_COMPAREFUNC_ALWAYS,
-            .pixel_format = SG_PIXELFORMAT_NONE,
-        },
-        .colors[0].pixel_format = SG_PIXELFORMAT_RGBA8,
-    });
-
-    // a pipeline object to upscale the offscreen RGBA8 framebuffer
-    // texture to the display
-    app.gfx.display_pip = sg_make_pipeline(&(sg_pipeline_desc){
-        .shader = sg_make_shader(display_shader_desc(sg_query_backend())),
-        .layout = {
-            .attrs[0].format = SG_VERTEXFORMAT_FLOAT2
-        },
-        .cull_mode = SG_CULLMODE_NONE,
-        .depth = {
-            .write_enabled = false,
-            .compare = SG_COMPAREFUNC_ALWAYS,
-        },
+        .format = SFB_FORMAT_PALETTE8,
+        .prescale = 2,
     });
 
     // start loading the DOOM1.WAD and soundfont files, the game start will be delayed
@@ -381,12 +284,11 @@ static void draw_greeting_screen(void) {
 
 // helper function to adjust aspect ratio
 static void apply_viewport(float canvas_width, float canvas_height) {
-    const float doom_width = (float)SCREENWIDTH;
-    const float doom_height = (float)SCREENHEIGHT;
     const int cw = (int)canvas_width;
     const int ch = (int)canvas_height;
     slbx_viewport vp = slbx_letterbox(cw, ch, &(slbx_letterbox_desc){
-        .content_aspect_ratio = doom_width / doom_height,
+        .content_aspect_ratio = 4.0f / 3.0f,
+        .border = { BORDER, BORDER, BORDER, BORDER },
     });
     sg_apply_viewport(vp.x, vp.y, vp.width, vp.height, true);
 }
@@ -394,37 +296,18 @@ static void apply_viewport(float canvas_width, float canvas_height) {
 // copy the Doom framebuffer into sokol-gfx texture and render to display
 static void draw_game_frame(void) {
     // update pixel and palette textures
-    sg_update_image(app.gfx.pix.img, &(sg_image_data){
-        .mip_levels[0] = {
+    sfb_update(app.gfx.fb, &(sfb_update_desc){
+        .pixels = {
             .ptr = I_VideoBuffer,
-            .size = SCREENWIDTH * SCREENHEIGHT,
-        }
-    });
-    sg_update_image(app.gfx.pal.img, &(sg_image_data){
-        .mip_levels[0] = {
-            .ptr = I_GetPalette(),
-            .size = 256 * sizeof(uint32_t)
-        }
-    });
-
-    // offscreen render pass to perform color palette lookup
-    sg_begin_pass(&(sg_pass){
-        .action = { .colors[0] = { .load_action = SG_LOADACTION_DONTCARE } },
-        .attachments = { .colors[0] = app.gfx.rgba.att_view },
-    });
-    sg_apply_pipeline(app.gfx.offscreen_pip);
-    sg_apply_bindings(&(sg_bindings){
-        .vertex_buffers[0] = app.gfx.vbuf,
-        .views = {
-            [VIEW_pix_img] = app.gfx.pix.tex_view,
-            [VIEW_pal_img] = app.gfx.pal.tex_view,
+            .size = SCREENWIDTH * SCREENHEIGHT
         },
-        .samplers[SMP_smp] = app.gfx.smp_palettize,
+        .palette = {
+            .ptr = I_GetPalette(),
+            .size = 256 * sizeof(uint32_t),
+        }
     });
-    sg_draw(0, 3, 1);
-    sg_end_pass();
 
-    // render resulting texture to display framebuffer with upscaling
+    // render resulting texture to display swapchain
     sg_begin_pass(&(sg_pass){
         .action = {
             .colors[0] = {
@@ -434,14 +317,8 @@ static void draw_game_frame(void) {
         },
         .swapchain = sglue_swapchain()
     });
-    sg_apply_pipeline(app.gfx.display_pip);
-    sg_apply_bindings(&(sg_bindings){
-        .vertex_buffers[0] = app.gfx.vbuf,
-        .views[VIEW_rgba_img] = app.gfx.rgba.tex_view,
-        .samplers[SMP_smp] = app.gfx.smp_upscale,
-    });
     apply_viewport(sapp_widthf(), sapp_heightf());
-    sg_draw(0, 3, 1);
+    sfb_render(app.gfx.fb);
     sg_end_pass();
     sg_commit();
 }
@@ -517,6 +394,7 @@ void cleanup(void) {
     saudio_shutdown();
     sfetch_shutdown();
     sdtx_shutdown();
+    sfb_shutdown();
     sg_shutdown();
 }
 
@@ -729,8 +607,8 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .frame_cb = frame,
         .cleanup_cb = cleanup,
         .event_cb = input,
-        .width = SCREENWIDTH * 3,
-        .height = SCREENHEIGHT * 3,
+        .width = 960 + 2 * BORDER,
+        .height = 720 + 2 * BORDER,
         .window_title = "Doom (shareware) on Sokol",
         .icon.sokol_default = true,
         .logger.func = slog_func,
