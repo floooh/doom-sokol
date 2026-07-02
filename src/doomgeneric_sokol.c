@@ -609,6 +609,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .event_cb = input,
         .width = 960 + 2 * BORDER,
         .height = 720 + 2 * BORDER,
+        .depth_format = SAPP_PIXELFORMAT_NONE,
         .window_title = "Doom (shareware) on Sokol",
         .icon.sokol_default = true,
         .logger.func = slog_func,
